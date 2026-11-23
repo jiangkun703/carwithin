@@ -1,0 +1,80 @@
+name: Build patched IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 从官方发布包补充 MFi 身份文件
+        run: |
+          set -e
+          curl -fL -o /tmp/cw.ipa "https://github.com/xmz28/CarWithin/releases/download/v1.0.4/CarWithin-1.0.4-unsigned.ipa"
+          unzip -q -o /tmp/cw.ipa -d /tmp/cwipa
+          APP=$(find /tmp/cwipa/Payload -maxdepth 1 -name "*.app" | head -1)
+          echo "identity from: $APP"
+          mkdir -p App/BundledIdentity
+          cp "$APP/certificate.p7b" "$APP/leaf.cer" "$APP/private.x963" App/BundledIdentity/
+          ls -la App/BundledIdentity
+
+      - name: 打 Wi-Fi 地址兜底补丁
+        run: |
+          set -e
+          : > /tmp/p.b64
+          echo -n 'ZGlmZiAtLWdpdCBhL0FwcC9OaW5lYm90T3V0cHV0LnN3aWZ0IGIvQXBwL05pbmVib3RPdXRwdXQuc3dpZnQKaW5kZXggNzcxZjM1NC4uZmMwNWUyNCAxMDA2NDQKLS0tIGEvQXBwL05pbmVib3RPdXRwdXQuc3dpZnQKKysrIGIvQXBwL05pbmVib3RPdXRwdXQuc3dpZnQKQEAgLTEwMiw4ICsxMDIsMTcgQEAgZmluYWwgY2xhc3MgTmluZWJvdE91dHB1dCB7CiAgICAgICAgICAgICBkbyB7CiAgICAgICAgICAgICAgICAgbGV0IHZpZGVvUG9ydCA9IE5pbmVib3RIMjY0UGFja2V0aXplci52aWRlb1BvcnQKICAgICAgICAgICAgICAgICBsZXQgY29udHJvbFBvcnQgPSBOaW5lYm90SDI2NFBhY2tldGl6ZXIuY29udHJvbFBvcnQKLSAgICAgICAgICAgICAgICB2aWRlbyA9IHRyeSBOaW5lYm90VURQU29ja2V0KGxvY2FsSVA6IGxvY2FsLCBsb2NhbFBvcnQ6IHZpZGVvUG9ydCwgcmVtb3RlSVA6IHRhcmdldCwgcmVtb3RlUG9ydDogdmlkZW9Qb3J0KQotICAgICAgICAgICAgICAgIGNvbnRyb2wgPSB0cnkgTmluZWJvdFVEUFNvY2tldChsb2NhbElQOiBsb2NhbCwgbG9jYWxQb3J0OiBjb250cm9sUG9ydCwgcmVtb3RlSVA6IHRhcmdldCwgcmVtb3RlUG9ydDogY29u' >> /tmp/p.b64
+          echo -n 'dHJvbFBvcnQpCisgICAgICAgICAgICAgICAgLy8g5pys5py65Zyw5Z2A5LiN5Y+v57uR77yI5L6L5aaC5ou/5LiN5YiwIGVuMCDnmoQgSVB2NO+8ieaXtu+8jOmAgOiAjOe7keWumuS7u+aEj+WcsOWdgOOAggorICAgICAgICAgICAgICAgIGZ1bmMgbWFrZVNvY2tldChfIGxvY2FsUG9ydDogVUludDE2KSB0aHJvd3MgLT4gTmluZWJvdFVEUFNvY2tldCB7CisgICAgICAgICAgICAgICAgICAgIGRvIHsKKyAgICAgICAgICAgICAgICAgICAgICAgIHJldHVybiB0cnkgTmluZWJvdFVEUFNvY2tldChsb2NhbElQOiBsb2NhbCwgbG9jYWxQb3J0OiBsb2NhbFBvcnQsIHJlbW90ZUlQOiB0YXJnZXQsIHJlbW90ZVBvcnQ6IGxvY2FsUG9ydCkKKyAgICAgICAgICAgICAgICAgICAgfSBjYXRjaCB7CisgICAgICAgICAgICAgICAgICAgICAgICBzZWxmLm9uTG9nKCLnu5HlrpogXChsb2NhbCk6XChsb2NhbFBvcnQpIOWksei0pe+8jOaUueeUqOS7u+aEj+acrOWcsOWcsOWdgCIpCisgICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gdHJ5IE5pbmVib3RVRFBTb2NrZXQobG9jYWxJUDogIjAuMC4wLjAiLCBsb2NhbFBvcnQ6IGxvY2FsUG9ydCwgcmVtb3RlSVA6IHRh' >> /tmp/p.b64
+          echo -n 'cmdldCwgcmVtb3RlUG9ydDogbG9jYWxQb3J0KQorICAgICAgICAgICAgICAgICAgICB9CisgICAgICAgICAgICAgICAgfQorICAgICAgICAgICAgICAgIHZpZGVvID0gdHJ5IG1ha2VTb2NrZXQodmlkZW9Qb3J0KQorICAgICAgICAgICAgICAgIGNvbnRyb2wgPSB0cnkgbWFrZVNvY2tldChjb250cm9sUG9ydCkKICAgICAgICAgICAgICAgICByZXBvcnQoc2V2ZW5JbmNoID8gIuetieW+heS5neWPtyA3IOWvuOS7quihqOWbnuW6lOKApiIgOiAi562J5b6F5Lmd5Y+35Luq6KGo5Zue5bqU4oCmIikKICAgICAgICAgICAgICAgICBzd2l0Y2ggbW9kZSB7CiAgICAgICAgICAgICAgICAgY2FzZSAuZm91clRocmVlSW5jaDogb25Mb2coIuS5neWPtyA0LjMg5a+477yaSlBFRy9SVFAgVURQIDUwMTIgwrcgUlRDUCBVRFAgNTAxMyDCtyA0ODDDlzI3MiDCtyDmnIDpq5ggMTAgRlBTIikKZGlmZiAtLWdpdCBhL0FwcC9SZWNlaXZlckNvbmZpZ3VyYXRpb24uc3dpZnQgYi9BcHAvUmVjZWl2ZXJDb25maWd1cmF0aW9uLnN3aWZ0CmluZGV4IDg3NmFiNTAuLmQ5OGZjMDMgMTAwNjQ0Ci0tLSBhL0FwcC9SZWNlaXZlckNvbmZpZ3VyYXRpb24uc3dpZnQKKysrIGIvQXBwL1Jl' >> /tmp/p.b64
+          echo -n 'Y2VpdmVyQ29uZmlndXJhdGlvbi5zd2lmdApAQCAtODUsOCArODUsMzAgQEAgc3RydWN0IFJlY2VpdmVyQ29uZmlndXJhdGlvbiB7CiAgICAgICAgICAgICAgICAgbWluKG1heEhlaWdodCwgbWF4KDMyMCwgSW50KGhlaWdodCAvIDIpICogMikpKQogICAgIH0KIAorICAgIC8vLyDmnKzmnLogV2ktRmkg55qEIElQdjTjgIJpT1Mg5LiKIFdpLUZpIOmAmuW4uOWPqyBlbjDvvIzkvYbmqKHmi5/lmajjgIHpg6jliIbotorni7Ev5beo6a2U546v5aKD44CBCisgICAgLy8vIOOAjOWQjOacuuOAjeiZmuaLn+mFjeS7tuaOpeeuoee9kee7nOaXtue8luWPt+WPr+iDveS4jeaYryBlbjDvvJvlj5bkuI3liLDml7bpgIDkuLrku7vmhI/lj6/nlKjnmoTmnKzlnLAgSVB2NAorICAgIC8vLyDvvIjmjpLpmaTonILnqp0gcGRwX2lwKiDkuI7lm57njq/jgIFMaW5rLUxvY2FsIDE2OS4yNTQuKu+8ieOAggogICAgIHN0YXRpYyBmdW5jIHdpZmlJUHY0QWRkcmVzcygpIC0+IFN0cmluZz8gewotICAgICAgICBsb2NhbElQdjRBZGRyZXNzZXMoaW50ZXJmYWNlOiAiZW4wIikuZmlyc3QKKyAgICAgICAgaWYgbGV0IGFkZHJlc3MgPSBsb2NhbElQdjRBZGRyZXNzZXMoaW50ZXJmYWNl' >> /tmp/p.b64
+          echo -n 'OiAiZW4wIikuZmlyc3QgeyByZXR1cm4gYWRkcmVzcyB9CisgICAgICAgIHZhciBmaXJzdDogVW5zYWZlTXV0YWJsZVBvaW50ZXI8aWZhZGRycz4/CisgICAgICAgIGd1YXJkIGdldGlmYWRkcnMoJmZpcnN0KSA9PSAwIGVsc2UgeyByZXR1cm4gbmlsIH0KKyAgICAgICAgZGVmZXIgeyBmcmVlaWZhZGRycyhmaXJzdCkgfQorICAgICAgICB2YXIgY3VycmVudCA9IGZpcnN0CisgICAgICAgIHdoaWxlIGxldCBlbnRyeSA9IGN1cnJlbnQgeworICAgICAgICAgICAgZGVmZXIgeyBjdXJyZW50ID0gZW50cnkucG9pbnRlZS5pZmFfbmV4dCB9CisgICAgICAgICAgICBsZXQgbmFtZSA9IFN0cmluZyhjU3RyaW5nOiBlbnRyeS5wb2ludGVlLmlmYV9uYW1lKQorICAgICAgICAgICAgZ3VhcmQgIW5hbWUuaGFzUHJlZml4KCJwZHBfaXAiKSwgIW5hbWUuaGFzUHJlZml4KCJsbyIpLCBuYW1lICE9ICJ1dHVuIiwgIW5hbWUuaGFzUHJlZml4KCJ1dHVuIiksCisgICAgICAgICAgICAgICAgICBsZXQgYWRkcmVzcyA9IGVudHJ5LnBvaW50ZWUuaWZhX2FkZHIsIGFkZHJlc3MucG9pbnRlZS5zYV9mYW1pbHkgPT0gVUludDgoQUZfSU5FVCksCisgICAgICAgICAgICAgICAgICBl' >> /tmp/p.b64
+          echo -n 'bnRyeS5wb2ludGVlLmlmYV9mbGFncyAmIFVJbnQzMihJRkZfVVApICE9IDAsCisgICAgICAgICAgICAgICAgICBlbnRyeS5wb2ludGVlLmlmYV9mbGFncyAmIFVJbnQzMihJRkZfTE9PUEJBQ0spID09IDAgZWxzZSB7IGNvbnRpbnVlIH0KKyAgICAgICAgICAgIHZhciBob3N0ID0gW0NDaGFyXShyZXBlYXRpbmc6IDAsIGNvdW50OiBJbnQoTklfTUFYSE9TVCkpCisgICAgICAgICAgICBpZiBnZXRuYW1laW5mbyhhZGRyZXNzLCBzb2NrbGVuX3QoYWRkcmVzcy5wb2ludGVlLnNhX2xlbiksICZob3N0LCBzb2NrbGVuX3QoaG9zdC5jb3VudCksIG5pbCwgMCwgTklfTlVNRVJJQ0hPU1QpID09IDAgeworICAgICAgICAgICAgICAgIGxldCB2YWx1ZSA9IFN0cmluZyhjU3RyaW5nOiBob3N0KQorICAgICAgICAgICAgICAgIGlmIHZhbHVlLmhhc1ByZWZpeCgiMTY5LjI1NC4iKSB8fCB2YWx1ZS5oYXNQcmVmaXgoIjAuIikgfHwgdmFsdWUuaGFzUHJlZml4KCIxMjcuIikgeyBjb250aW51ZSB9CisgICAgICAgICAgICAgICAgcmV0dXJuIHZhbHVlCisgICAgICAgICAgICB9CisgICAgICAgIH0KKyAgICAgICAgcmV0dXJuIG5pbAogICAgIH0KIAogICAgIHN0YXRpYyBm' >> /tmp/p.b64
+          echo -n 'dW5jIGxvY2FsSVB2NEFkZHJlc3NlcyhpbnRlcmZhY2U6IFN0cmluZz8gPSBuaWwpIC0+IFtTdHJpbmddIHsKQEAgLTk4LDcgKzEyMCw3IEBAIHN0cnVjdCBSZWNlaXZlckNvbmZpZ3VyYXRpb24gewogICAgICAgICB3aGlsZSBsZXQgZW50cnkgPSBjdXJyZW50IHsKICAgICAgICAgICAgIGRlZmVyIHsgY3VycmVudCA9IGVudHJ5LnBvaW50ZWUuaWZhX25leHQgfQogICAgICAgICAgICAgbGV0IG5hbWUgPSBTdHJpbmcoY1N0cmluZzogZW50cnkucG9pbnRlZS5pZmFfbmFtZSkKLSAgICAgICAgICAgIGd1YXJkIGludGVyZmFjZSA9PSBuaWwgfHwgaW50ZXJmYWNlID09IG5hbWUsCisgICAgICAgICAgICBndWFyZCBpbnRlcmZhY2UgPT0gbmlsIHx8IGludGVyZmFjZSA9PSBuYW1lIHx8IG5hbWUgPT0gImFueSIsCiAgICAgICAgICAgICAgICAgICBsZXQgYWRkcmVzcyA9IGVudHJ5LnBvaW50ZWUuaWZhX2FkZHIsIGFkZHJlc3MucG9pbnRlZS5zYV9mYW1pbHkgPT0gVUludDgoQUZfSU5FVCksCiAgICAgICAgICAgICAgICAgICBlbnRyeS5wb2ludGVlLmlmYV9mbGFncyAmIFVJbnQzMihJRkZfVVApICE9IDAsCiAgICAgICAgICAgICAgICAgICBlbnRyeS5wb2lu' >> /tmp/p.b64
+          echo -n 'dGVlLmlmYV9mbGFncyAmIFVJbnQzMihJRkZfTE9PUEJBQ0spID09IDAgZWxzZSB7IGNvbnRpbnVlIH0KQEAgLTEwNiw3ICsxMjgsOCBAQCBzdHJ1Y3QgUmVjZWl2ZXJDb25maWd1cmF0aW9uIHsKICAgICAgICAgICAgIGlmIGdldG5hbWVpbmZvKGFkZHJlc3MsIHNvY2tsZW5fdChhZGRyZXNzLnBvaW50ZWUuc2FfbGVuKSwgJmhvc3QsIHNvY2tsZW5fdChob3N0LmNvdW50KSwgbmlsLCAwLCBOSV9OVU1FUklDSE9TVCkgPT0gMCB7CiAgICAgICAgICAgICAgICAgbGV0IHZhbHVlID0gU3RyaW5nKGNTdHJpbmc6IGhvc3QpCiAgICAgICAgICAgICAgICAgaWYgaW50ZXJmYWNlICE9IG5pbCAmJiAodmFsdWUuaGFzUHJlZml4KCIxNjkuMjU0LiIpIHx8IHZhbHVlLmhhc1ByZWZpeCgiMC4iKSkgeyBjb250aW51ZSB9Ci0gICAgICAgICAgICAgICAgaWYgbmFtZSA9PSAiZW4wIiB7IHJlc3VsdC5pbnNlcnQodmFsdWUsIGF0OiAwKSB9CisgICAgICAgICAgICAgICAgLy8gV2ktRmkg5LiK55qE5Zyw5Z2A5LyY5YWI77yIZW4w77yJ77yM5YW25qyh5YW25LuW6Z2e6JyC56qd5o6l5Y+j44CCCisgICAgICAgICAgICAgICAgaWYgbmFtZSA9PSAiZW4wIiB8fCAhbmFtZS5o' >> /tmp/p.b64
+          echo -n 'YXNQcmVmaXgoInBkcF9pcCIpIHsgcmVzdWx0Lmluc2VydCh2YWx1ZSwgYXQ6IDApIH0KICAgICAgICAgICAgICAgICBlbHNlIHsgcmVzdWx0LmFwcGVuZCh2YWx1ZSkgfQogICAgICAgICAgICAgfQogICAgICAgICB9CkBAIC0xMjgsNyArMTUxLDcgQEAgc3RydWN0IFJlY2VpdmVyQ29uZmlndXJhdGlvbiB7CiAgICAgICAgIGd1YXJkIGluZXRfcHRvbihBRl9JTkVULCBhZGRyZXNzLCAmcGFyc2VkKSA9PSAxIGVsc2UgewogICAgICAgICAgICAgdGhyb3cgQ29uZmlndXJhdGlvbkVycm9yKCLor7fpgInmi6nmnInmlYjnmoQgSVB2NCDlnLDlnYDjgIIiKQogICAgICAgICB9Ci0gICAgICAgIGlmIHJlcXVpcmVzTG9jYWxBZGRyZXNzICYmICFTZWxmLmxvY2FsSVB2NEFkZHJlc3NlcygpLmNvbnRhaW5zKGFkZHJlc3MpIHsKKyAgICAgICAgaWYgcmVxdWlyZXNMb2NhbEFkZHJlc3MgJiYgYWRkcmVzcyAhPSAiMC4wLjAuMCIgJiYgIVNlbGYubG9jYWxJUHY0QWRkcmVzc2VzKCkuY29udGFpbnMoYWRkcmVzcykgewogICAgICAgICAgICAgdGhyb3cgQ29uZmlndXJhdGlvbkVycm9yKCLor7fpgInmi6nlsZ7kuo7mnKzmnLrlvZPliY3nvZHnu5zov57mjqXnmoQgSVAg' >> /tmp/p.b64
+          echo -n '5Zyw5Z2A44CCIikKICAgICAgICAgfQogICAgICAgICAvLyBGaXhlZCBwcmVzZXRzIG9yIGEgc2l6ZSB0aGF0IGZvbGxvd3MgdGhlIGhlYWQgdW5pdDogZXZlbiwgd2l0aGluIDMyMOKApjM4NDAgcGVyIHNpZGUgYW5kCmRpZmYgLS1naXQgYS9BcHAvUmVjZWl2ZXJWaWV3Q29udHJvbGxlci5zd2lmdCBiL0FwcC9SZWNlaXZlclZpZXdDb250cm9sbGVyLnN3aWZ0CmluZGV4IDFhMWJjNTQuLmI5OTk0YmEgMTAwNjQ0Ci0tLSBhL0FwcC9SZWNlaXZlclZpZXdDb250cm9sbGVyLnN3aWZ0CisrKyBiL0FwcC9SZWNlaXZlclZpZXdDb250cm9sbGVyLnN3aWZ0CkBAIC0xNTE1LDEzICsxNTE1LDIzIEBAIGZpbmFsIGNsYXNzIFJlY2VpdmVyVmlld0NvbnRyb2xsZXI6IFVJVmlld0NvbnRyb2xsZXIsIENMTG9jYXRpb25NYW5hZ2VyRGVsZWdhdGUKICAgICAgICAgICAgIGd1YXJkIGxldCBzZWxmLCBzZWxmLnJ1bm5pbmcgZWxzZSB7IHJldHVybiB9CiAgICAgICAgICAgICB2YXIgbGl2ZSA9IGNvbmZpZzsgbGl2ZS5wb3J0ID0gcG9ydAogICAgICAgICAgICAgc2VsZi5zdGF0dXNMYWJlbC50ZXh0ID0gIuato+WcqOetieW+hSBpUGhvbmUg6L+e5o6lIgotICAgICAgICAg' >> /tmp/p.b64
+          echo -n 'ICAgaWYgc2VsZi5ibHVldG9vdGhTZXR1cFN3aXRjaC5pc09uIHsgc2VsZi5ibHVldG9vdGguc3RhcnQoY29uZmlndXJhdGlvbjogbGl2ZSkgfQorICAgICAgICAgICAgaWYgc2VsZi5ibHVldG9vdGhTZXR1cFN3aXRjaC5pc09uLCAhc2VsZi5mYWxsc0JhY2tUb0FueUFkZHJlc3MgeyBzZWxmLmJsdWV0b290aC5zdGFydChjb25maWd1cmF0aW9uOiBsaXZlKSB9CiAgICAgICAgIH0KICAgICAgICAgcHJlcGFyZUV4dGVybmFsT3V0cHV0KGNvbmZpZ3VyYXRpb246IGNvbmZpZykKICAgICAgICAgcmVjZWl2ZXIuc3RhcnQoY29uZmlndXJhdGlvbjogY29uZmlnLCBpZGVudGl0eTogaWRlbnRpdHkpCiAgICAgfQorICAgIC8vLyDmnKzmrKHlkK/liqjmmK/lkKblm6DkuLrmi7/kuI3liLAgZW4wIOWcsOWdgOiAjOmAgOWMluS4uuS7u+aEj+acrOWcsOWcsOWdgO+8iDAuMC4wLjDvvInjgIIKKyAgICBwcml2YXRlIHZhciBmYWxsc0JhY2tUb0FueUFkZHJlc3MgPSBmYWxzZQogICAgIHByaXZhdGUgdmFyIGxvY2FsQ2FyUGxheUFkZHJlc3M6IFN0cmluZz8gewotICAgICAgICBvdXRwdXRNb2RlLnVzZXNJbnN0cnVtZW50V2lGaSA/IFJlY2VpdmVyQ29uZmlndXJhdGlv' >> /tmp/p.b64
+          echo -n 'bi53aWZpSVB2NEFkZHJlc3MoKSA6IGJyb3dzZXJBZGRyZXNzCisgICAgICAgIC8vIOi9puacuiBXaS1GaSAvIERJUkVDVC0qIOetieiHquW7uueDreeCueWcqOmDqOWIhuacuuWei+S4iuaLv+S4jeWIsCBlbjAg55qEIElQdjTvvJsKKyAgICAgICAgLy8g5Lya6K+d5Y+q6ZyA6KaB5LiA5Liq5Y+v57uR5a6a55qE5pys5Zyw5Zyw5Z2A77yM6YCA5YyW5Li6IDAuMC4wLjDvvIjku7vmhI/mnKzlnLDlnLDlnYDvvInjgIIKKyAgICAgICAgbGV0IGFkZHJlc3MgPSBvdXRwdXRNb2RlLnVzZXNJbnN0cnVtZW50V2lGaSA/IFJlY2VpdmVyQ29uZmlndXJhdGlvbi53aWZpSVB2NEFkZHJlc3MoKSA6IGJyb3dzZXJBZGRyZXNzCisgICAgICAgIGlmIGFkZHJlc3MgPT0gbmlsIHsKKyAgICAgICAgICAgIGxldCBhbGwgPSBSZWNlaXZlckNvbmZpZ3VyYXRpb24ubG9jYWxJUHY0QWRkcmVzc2VzKCkKKyAgICAgICAgICAgIGxvZygi5pyq5Y+W5b6X5pys5py6IElQdjQg5Zyw5Z2A77yI5Y+v55So5o6l5Y+j77yaXChhbGwuaXNFbXB0eSA/ICLml6DvvIxlbjAg5pegIElQdjQiIDogYWxsLmpvaW5lZChzZXBhcmF0b3I6ICIsICIpKe+8ie+8jOaUueeUqOS7u+aEj+acrOWcsOWc' >> /tmp/p.b64
+          echo -n 'sOWdgO+8iDAuMC4wLjDvvInlkK/liqgiKQorICAgICAgICAgICAgZmFsbHNCYWNrVG9BbnlBZGRyZXNzID0gdHJ1ZQorICAgICAgICB9CisgICAgICAgIHJldHVybiBhZGRyZXNzID8/ICIwLjAuMC4wIgogICAgIH0KIAogICAgIHByaXZhdGUgZnVuYyByZWZyZXNoTmV0d29ya0FkZHJlc3NlcygpIHsKQEAgLTE1NjcsNyArMTU3Nyw3IEBAIGZpbmFsIGNsYXNzIFJlY2VpdmVyVmlld0NvbnRyb2xsZXI6IFVJVmlld0NvbnRyb2xsZXIsIENMTG9jYXRpb25NYW5hZ2VyRGVsZWdhdGUKICAgICAgICAgICAgIGZvciBfIGluIDAuLjw5MCB7CiAgICAgICAgICAgICAgICAgdHJ5PyBhd2FpdCBUYXNrLnNsZWVwKG5hbm9zZWNvbmRzOiA1MDBfMDAwXzAwMCkKICAgICAgICAgICAgICAgICBndWFyZCAhVGFzay5pc0NhbmNlbGxlZCwgbGV0IHNlbGYsIHNlbGYucnVubmluZywgIXNlbGYuZGlzcGxheWVkVmlkZW8gZWxzZSB7IHJldHVybiB9Ci0gICAgICAgICAgICAgICAgbGV0IGFkZHJlc3MgPSBzZWxmLmxvY2FsQ2FyUGxheUFkZHJlc3MKKyAgICAgICAgICAgICAgICBsZXQgYWRkcmVzcyA9IChzZWxmLmxvY2FsQ2FyUGxheUFkZHJlc3MgPT0gIjAuMC4wLjAiKSA/' >> /tmp/p.b64
+          echo -n 'IG5pbCA6IHNlbGYubG9jYWxDYXJQbGF5QWRkcmVzcwogICAgICAgICAgICAgICAgIHNlbGYucmVmcmVzaE5ldHdvcmtBZGRyZXNzZXMoKQogICAgICAgICAgICAgICAgIGlmIGFkZHJlc3MgPT0gbmlsIHsgbG9zdEFkZHJlc3MgPSB0cnVlIH0KICAgICAgICAgICAgICAgICBpZiBhZGRyZXNzICE9IGNhbmRpZGF0ZSB7IGNhbmRpZGF0ZSA9IGFkZHJlc3M7IHN0YWJsZVNhbXBsZXMgPSAwIH0KQEAgLTI1OTIsNiArMjYwMiwxMCBAQCBleHRlbnNpb24gUmVjZWl2ZXJWaWV3Q29udHJvbGxlciB7CiAgICAgICAgIGlmIGNvbmZpZ3VyYXRpb24uY2FyTGlmZUVuYWJsZWQgewogICAgICAgICAgICAgdXBkYXRlQ2FyTGlmZVN0YXR1cygi5q2j5Zyo562J5b6F6L2m5py66L+e5o6l4oCmIikKICAgICAgICAgfQorICAgICAgICAvLyDlnLDlnYDpgIDljJbkuLogMC4wLjAuMCDml7bkuI3mmK/nnJ/lrp7lnLDlnYDvvJrmkq3mlL7lmajkuI3og73nlKjlroPlj5bmtYHvvIwKKyAgICAgICAgLy8g5Lmf5LiN5bqU6LWw5bm/5pKt5byV5a+877yI6YKj6L655Lya5oqK5Zyw5Z2A5Lqk57uZ5ZCM5py6IGlPUyDov57mjqXvvInjgIIKKyAgICAgICAgbGV0IGV4YWN0QWRkcmVz' >> /tmp/p.b64
+          echo -n 'cyA9IGNvbmZpZ3VyYXRpb24uYWRkcmVzcyAhPSAiMC4wLjAuMCIKKyAgICAgICAgZ3VhcmQgZXhhY3RBZGRyZXNzIGVsc2UgeyByZXR1cm4gfQogICAgICAgICBndWFyZCBsZXQgaWQgPSBjb25maWd1cmF0aW9uLmFpclBsYXlTdHJlYW1JRCwgbGV0IHBvcnQgPSBjb25maWd1cmF0aW9uLnZpZGVvT3V0cHV0UG9ydCBlbHNlIHsgcmV0dXJuIH0KICAgICAgICAgYWlyUGxheVN0cmVhbUlEID0gaWQKICAgICAgICAgYWlyUGxheVN0cmVhbVVSTCA9IFVSTChzdHJpbmc6ICJodHRwOi8vXChjb25maWd1cmF0aW9uLmFkZHJlc3MpOlwocG9ydCkvYWlycGxheS9cKGlkLnV1aWRTdHJpbmcpL21hc3Rlci5tM3U4IikK' >> /tmp/p.b64
+          openssl base64 -d -A -in /tmp/p.b64 -out /tmp/carwithin.patch
+          head -5 /tmp/carwithin.patch
+          patch -p1 --dry-run < /tmp/carwithin.patch
+          patch -p1 < /tmp/carwithin.patch
+
+      - name: 编译（不签名）
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project TDSCarKit.xcodeproj \
+            -scheme TDSCarKit \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            build | tail -60
+
+      - name: 打包成 IPA
+        run: |
+          set -e
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -1)
+          echo "app: $APP"
+          rm -rf out && mkdir -p out/Payload
+          cp -R "$APP" out/Payload/
+          cd out && zip -qry CarWithin-patched-unsigned.ipa Payload
+          ls -lh CarWithin-patched-unsigned.ipa
+          shasum -a 256 CarWithin-patched-unsigned.ipa | tee sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CarWithin-patched-unsigned
+          path: |
+            out/CarWithin-patched-unsigned.ipa
+            out/sha256.txt
+          retention-days: 30
